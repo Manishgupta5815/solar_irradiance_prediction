@@ -1,8 +1,8 @@
-**Solar Irradiance Forecasting Model**
+#Solar Irradiance Forecasting Model
 This repository contains a project focused on building a neural network model for forecasting solar irradiance based on meteorological data. The project includes data pre-processing steps, model training, performance analysis, and future plans for real-time irradiance reporting using Arduino.
-**Project Overview**
+#Project Overview
 Accurate forecasting of solar irradiance is critical for efficient solar power generation and management. This project employs an Artificial Neural Network (ANN) to predict solar irradiance based on weather-related features such as temperature, humidity, and wind direction. Various model optimization techniques, including gradient descent, stochastic gradient descent (SGD), and gradient clipping, have been used to improve model accuracy and stability.
-**Key Features**
+#Key Features
 •	Data Pre-Processing: Extracted 16 features from meteorological data for model input, normalized the data, and split it into training and testing datasets.
 •	Model Optimization:
 •	Weight Initialization: Utilized Kaiming He initialization to mitigate gradient vanishing/exploding issues.
@@ -12,15 +12,3 @@ Accurate forecasting of solar irradiance is critical for efficient solar power g
 •	Real-Time Prediction (Future Scope): Planned implementation of real-time solar irradiance prediction using data from an Arduino kit.
 **Results**
 The neural network model achieved an MSE of approximately 8,752.26 on the testing data, significantly outperforming a linear regression model which achieved an MSE of 35,658.31.
-**Experimental Setup**
-1.	Programming Language: Python
-2.	Libraries Used: TensorFlow, Pandas, NumPy, Matplotlib
-3.	Training Data: Historical meteorological data containing features like temperature, humidity, wind direction, and time of day.
-**Future Work**
-An expansion of the project involves:
-•	Time-Series Models: Implementation of LSTM and TCN models for time-series forecasting.
-•	Real-Time Reporting: Creation of a web-based platform using an Arduino setup to collect and report real-time solar irradiance data.
-
-
-Copy code
-python train_model.py
