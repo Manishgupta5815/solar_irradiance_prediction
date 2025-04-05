@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solar Irradiance Prediction</title>
+</head>
+<body>
+    <h1>Predict Solar Irradiance</h1>
+    <form method="POST" action="/predict">
+        <label for="Temperature">Temperature (°C): </label>
+        <input type="text" name="Temperature" required><br><br>
+
+        <label for="Pressure">Pressure (hPa): </label>
+        <input type="text" name="Pressure" required><br><br>
+
+        <label for="Humidity">Humidity (%): </label>
+        <input type="text" name="Humidity" required><br><br>
+
+        <label for="WindDirection">Wind Direction (°): </label>
+        <input type="text" name="WindDirection" required><br><br>
+
+        <label for="Speed">Wind Speed (km/h): </label>
+        <input type="text" name="Speed" required><br><br>
+
+        <label for="Time">Time (HH:MM:SS): </label>
+        <input type="text" name="Time" required><br><br>
+
+        <label for="TimeSunRise">Sunrise Time (HH:MM:SS): </label>
+        <input type="text" name="TimeSunRise" required><br><br>
+
+        <label for="TimeSunSet">Sunset Time (HH:MM:SS): </label>
+        <input type="text" name="TimeSunSet" required><br><br>
+
+        <button type="submit">Predict</button>
+        <!-- hi -->
+    </form>
+    {% if prediction %}
+    <h2>Predicted Solar Irradiance: {{ prediction }} W/m²</h2>
+    {% endif %}
+
+    {% if error %}
+    <h2>Error: {{ error }}</h2>
+    {% endif %}
+</body>
+</html>
