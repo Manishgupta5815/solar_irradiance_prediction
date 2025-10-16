@@ -1,19 +1,19 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import train_test_split
+import pickle
 
-class Net:
-   class Net:
-    import numpy as np
-import matplotlib.pyplot as plt
-
-class Net:
-    def __init__(self, layers=[16, 64, 48, 32, 1], learning_rate=0.01, iterations=50, lambda_reg=0.01, patience=10):
-       
+import h5py
+np.random.seed(42)
+class Net():
+        
+    def __init__(self, layers=[16,64,48,32,1], learning_rate=0.01, iterations=50):
         self.params = {}
         self.learning_rate = learning_rate
         self.iterations = iterations
-        self.lambda_reg = lambda_reg
-        self.patience = patience
         self.loss = []
         self.loss_test = []
         self.loss_train_mae = []
@@ -23,16 +23,157 @@ class Net:
         self.layers = layers
         self.X = None
         self.y = None
-        self.best_val_loss = float('inf')
-        self.wait = 0
-
-
-    def evaluate(self, X_test, y_test):  # Added the evaluate method
-        """Evaluates the model on test data."""
-        preds = self.predict(X_test)
-        return self.rmse_loss(y_test, preds), self.mse_loss(y_test, preds), self.mae_loss(y_test, preds)
-
+                
+    def init_weights(self):
+        '''
+        Initialize the weights from a random normal distribution
+        '''
+        np.random.seed(1)
+        self.params["W1"] = np.random.randn(self.layers[0], self.layers[1]) * np.sqrt(2/self.layers[0])
+        self.params['b1']  =np.random.randn(self.layers[1],)* np.sqrt(2/self.layers[0])
+        self.params['W2'] = np.random.randn(self.layers[1],self.layers[2]) * np.sqrt(2/self.layers[1])
+        self.params['b2'] = np.random.randn(self.layers[2],) * np.sqrt(2/self.layers[1])
+        self.params["W3"] = np.random.randn(self.layers[2], self.layers[3]) * np.sqrt(2/self.layers[2])
+        self.params['b3']  =np.random.randn(self.layers[3],)* np.sqrt(2/self.layers[2])
+        self.params['W4'] = np.random.randn(self.layers[3],self.layers[4]) * np.sqrt(2/self.layers[3])
+        self.params['b4'] = np.random.randn(self.layers[4],)* np.sqrt(2/self.layers[3])
     
+    def relu(self,Z):
+        '''
+        The ReLu activation function is to performs a threshold
+        operation to each input element where values less 
+        than zero are set to zero.
+        '''
+        return np.maximum(0,Z)
+
+    def dRelu(self, x):
+        x[x<=0] = 0
+        x[x>0] = 1
+        return x
+
+    def mse_loss(self,y, yhat):
+
+        loss = np.mean(np.power(yhat-y, 2));
+        return loss
+    def rmse_loss(self,y, yhat):
+    
+        loss = np.sqrt(np.mean(np.power(yhat-y, 2)))
+        return loss
+    def mae_loss(self,y, yhat):
+        
+        loss = np.mean(np.abs(yhat-y))
+        return loss
+    def r2_score(self,y_true, y_pred):
+        ss_res = np.sum((y_true - y_pred)**2)
+        ss_tot = np.sum((y_true - np.mean(y_true))**2)
+        return 1 - (ss_res / ss_tot)
+
+    def forward_propagation(self,optimizer="Batch",randomKey=0):
+        if(optimizer == "Batch"):
+            Z1 = self.X.dot(self.params['W1']) + self.params['b1']
+            A1 = self.relu(Z1)
+            Z2 = A1.dot(self.params['W2']) + self.params['b2']
+            A2 = self.relu(Z2)
+            Z3 = A2.dot(self.params['W3']) + self.params['b3']
+            A3 = self.relu(Z3)
+            Z4 = A3.dot(self.params['W4']) + self.params['b4']
+            yhat = self.relu(Z4)
+            loss = self.mse_loss(self.y,yhat)
+        elif(optimizer == "SGD"):
+            Z1 = self.X[randomKey,:].dot(self.params['W1']) + self.params['b1']
+            A1 = self.relu(Z1)
+            Z2 = A1.dot(self.params['W2']) + self.params['b2']
+            A2 = self.relu(Z2)
+            Z3 = A2.dot(self.params['W3']) + self.params['b3']
+            A3 = self.relu(Z3)
+            Z4 = A3.dot(self.params['W4']) + self.params['b4']
+            yhat = self.relu(Z4)
+            loss = self.mse_loss(self.y[randomKey,:],yhat)
+    
+        self.params['Z1'] = Z1
+        self.params['Z2'] = Z2
+        self.params['Z3'] = Z3
+        self.params['Z4'] = Z4
+        self.params['A1'] = A1
+        self.params['A2'] = A2
+        self.params['A3'] = A3
+
+        return yhat,loss
+
+    def back_propagation(self,yhat,optimizer="Batch",randomKey=0):
+        '''
+        Computes the derivatives and update weights and bias according.
+        '''
+        if(optimizer == "Batch"):
+            dl_wrt_yhat = (yhat-self.y)
+            dl_wrt_z4 = dl_wrt_yhat * self.dRelu(self.params["Z4"])
+            dl_wrt_w4 = self.params['A3'].T.dot(dl_wrt_z4)
+            dl_wrt_b4 = np.sum(dl_wrt_z4, axis=0, keepdims=True)
+
+            dl_wrt_A3 = dl_wrt_z4.dot(self.params['W4'].T)
+            dl_wrt_z3 = dl_wrt_A3 * self.dRelu(self.params['Z3'])
+            dl_wrt_w3 = self.params['A2'].T.dot(dl_wrt_z3)
+            dl_wrt_b3 = np.sum(dl_wrt_z3, axis=0, keepdims=True)
+            
+            dl_wrt_A2 = dl_wrt_z3.dot(self.params['W3'].T)
+            dl_wrt_z2 = dl_wrt_A2 * self.dRelu(self.params['Z2'])
+            dl_wrt_w2 = self.params['A1'].T.dot(dl_wrt_z2)
+            dl_wrt_b2 = np.sum(dl_wrt_z2, axis=0, keepdims=True)
+            
+            dl_wrt_A1 = dl_wrt_z2.dot(self.params['W2'].T)
+            dl_wrt_z1 = dl_wrt_A1 * self.dRelu(self.params['Z1'])
+            dl_wrt_w1 = self.X.T.dot(dl_wrt_z1)
+            dl_wrt_b1 = np.sum(dl_wrt_z1, axis=0, keepdims=True)
+
+            dl_wrt_w1 = dl_wrt_w1.clip(min=-6.5,max=6.5)
+            dl_wrt_w2 = dl_wrt_w2.clip(min=-6.5,max=6.5)
+            dl_wrt_w3 = dl_wrt_w3.clip(min=-6.5,max=6.5)
+            dl_wrt_w4 = dl_wrt_w4.clip(min=-6.5,max=6.5)
+            dl_wrt_b1 = dl_wrt_b1.clip(min=-6.5,max=6.5)
+            dl_wrt_b2 = dl_wrt_b2.clip(min=-6.5,max=6.5)
+            dl_wrt_b3 = dl_wrt_b3.clip(min=-6.5,max=6.5)
+            dl_wrt_b4 = dl_wrt_b4.clip(min=-6.5,max=6.5)
+            
+        elif(optimizer == "SGD"):
+            
+            dl_wrt_yhat = (yhat-self.y[randomKey,:])
+            dl_wrt_z4 = dl_wrt_yhat * self.dRelu(self.params["Z4"])
+            dl_wrt_w4 = self.params['A3'].T.dot(dl_wrt_z4)
+            dl_wrt_b4 = np.sum(dl_wrt_z4, axis=0, keepdims=True)
+
+            dl_wrt_A3 = dl_wrt_z4.dot(self.params['W4'].T)
+            dl_wrt_z3 = dl_wrt_A3 * self.dRelu(self.params['Z3'])
+            dl_wrt_w3 = self.params['A2'].T.dot(dl_wrt_z3)
+            dl_wrt_b3 = np.sum(dl_wrt_z3, axis=0, keepdims=True)
+            
+            dl_wrt_A2 = dl_wrt_z3.dot(self.params['W3'].T)
+            dl_wrt_z2 = dl_wrt_A2 * self.dRelu(self.params['Z2'])
+            dl_wrt_w2 = self.params['A1'].T.dot(dl_wrt_z2)
+            dl_wrt_b2 = np.sum(dl_wrt_z2, axis=0, keepdims=True)
+            
+            dl_wrt_A1 = dl_wrt_z2.dot(self.params['W2'].T)
+            dl_wrt_z1 = dl_wrt_A1 * self.dRelu(self.params['Z1'])
+            dl_wrt_w1 = self.X[randomKey,:].T.dot(dl_wrt_z1)
+            dl_wrt_b1 = np.sum(dl_wrt_z1, axis=0, keepdims=True)
+
+            dl_wrt_w1 = dl_wrt_w1.clip(min=-6.5,max=6.5)
+            dl_wrt_w2 = dl_wrt_w2.clip(min=-6.5,max=6.5)
+            dl_wrt_w3 = dl_wrt_w3.clip(min=-6.5,max=6.5)
+            dl_wrt_w4 = dl_wrt_w4.clip(min=-6.5,max=6.5)
+            dl_wrt_b1 = dl_wrt_b1.clip(min=-6.5,max=6.5)
+            dl_wrt_b2 = dl_wrt_b2.clip(min=-6.5,max=6.5)
+            dl_wrt_b3 = dl_wrt_b3.clip(min=-6.5,max=6.5)
+            dl_wrt_b4 = dl_wrt_b4.clip(min=-6.5,max=6.5)
+            
+                
+        self.params['W1'] = self.params['W1'] - self.learning_rate * dl_wrt_w1
+        self.params['W2'] = self.params['W2'] - self.learning_rate * dl_wrt_w2
+        self.params['W3'] = self.params['W3'] - self.learning_rate * dl_wrt_w3
+        self.params['W4'] = self.params['W4'] - self.learning_rate * dl_wrt_w4
+        self.params['b1'] = self.params['b1'] - self.learning_rate * dl_wrt_b1
+        self.params['b2'] = self.params['b2'] - self.learning_rate * dl_wrt_b2
+        self.params['b3'] = self.params['b3'] - self.learning_rate * dl_wrt_b3
+        self.params['b4'] = self.params['b4'] - self.learning_rate * dl_wrt_b4
 
     def fit(self, X, y,X_test,y_test,optimizer="Batch",batch_size=32):
         '''
@@ -92,139 +233,112 @@ class Net:
                 self.loss_test.append(loss_test)
                 print("Epoch {}: MSE Training Loss {} - MSE Testing Loss {} - MAE Testing Loss {} - RMSE Testing Loss {}".format(i+1, loss,loss_test,loss_test_mae,loss_test_rmse))
 
-    def init_weights(self):
-        np.random.seed(1)
-        # Ensure weight dimensions match the layers architecture
-        self.params["W1"] = np.random.randn(self.layers[0], self.layers[1]) * np.sqrt(2/self.layers[0])
-        self.params['b1'] = np.zeros((self.layers[1], 1))
-        self.params['W2'] = np.random.randn(self.layers[1], self.layers[2]) * np.sqrt(2/self.layers[1])
-        self.params['b2'] = np.zeros((self.layers[2], 1))
-        self.params['W3'] = np.random.randn(self.layers[2], self.layers[3]) * np.sqrt(2/self.layers[2])
-        self.params['b3'] = np.zeros((self.layers[3], 1))
-        self.params['W4'] = np.random.randn(self.layers[3], self.layers[4]) * np.sqrt(2/self.layers[3])
-        self.params['b4'] = np.zeros((self.layers[4], 1))
-
-    def relu(self, Z):
-        return np.maximum(0, Z)
-
-    def dRelu(self, x):
-        return np.where(x > 0, 1, 0)
-
-    def mse_loss(self, y, yhat):
-        return np.mean(np.power(yhat - y, 2))
-    
-    def rmse_loss(self, y, yhat):
-        return np.sqrt(np.mean(np.power(yhat - y, 2)))
-    
-    def mae_loss(self, y, yhat):
-        return np.mean(np.abs(yhat - y))
-
-    def forward_propagation(self, optimizer="Batch", random_indices=None):
-        if optimizer == "Batch":
-            X = self.X
-            y = self.y.reshape(-1, 1)
-        else:  # Mini-Batch SGD
-            X = self.X[random_indices] if random_indices is not None else self.X
-            y = self.y[random_indices].reshape(-1, 1)
-        
-        Z1 = X.dot(self.params['W1']) + self.params['b1'].T
-        A1 = self.relu(Z1)
-        Z2 = A1.dot(self.params['W2']) + self.params['b2'].T
-        A2 = self.relu(Z2)
-        Z3 = A2.dot(self.params['W3']) + self.params['b3'].T
-        A3 = self.relu(Z3)
-        Z4 = A3.dot(self.params['W4']) + self.params['b4'].T
-        yhat = Z4  # No ReLU on last layer
-
-        loss = self.mse_loss(y, yhat) + self.lambda_reg * (
-            np.sum(np.square(self.params['W1'])) + np.sum(np.square(self.params['W2'])) +
-            np.sum(np.square(self.params['W3'])) + np.sum(np.square(self.params['W4']))
-        )
-        
-        self.params.update({'Z1': Z1, 'Z2': Z2, 'Z3': Z3, 'Z4': Z4, 'A1': A1, 'A2': A2, 'A3': A3})
-        return yhat, loss
-
-     # Backpropagation method with gradient clipping
-    def back_propagation(self, yhat, optimizer="SGD", random_indices=None):
-        # Calculate the error/loss gradient for the last layer (output layer)
-        m = yhat.shape[0]  # Batch size
-        y = self.y[random_indices] if random_indices is not None else self.y.reshape(-1, 1)
-        X = self.X[random_indices] if random_indices is not None else self.X 
-
-        # Output layer gradient
-        dZ4 = yhat - y  # Derivative of the loss w.r.t. output Z4
-        dW4 = (1/m) * self.params['A3'].T.dot(dZ4) + (self.lambda_reg / m) * self.params['W4']
-        db4 = (1/m) * np.sum(dZ4, axis=0, keepdims=True)
-
-        # Backpropagate the error through the 3rd layer
-        dA3 = dZ4.dot(self.params['W4'].T)
-        dZ3 = dA3 * self.dRelu(self.params['Z3'])  # Elementwise multiplication with the derivative of ReLU
-        dW3 = (1/m) * self.params['A2'].T.dot(dZ3) + (self.lambda_reg / m) * self.params['W3']
-        db3 = (1/m) * np.sum(dZ3, axis=0, keepdims=True)
-
-        # Backpropagate the error through the 2nd layer
-        dA2 = dZ3.dot(self.params['W3'].T)
-        dZ2 = dA2 * self.dRelu(self.params['Z2'])
-        dW2 = (1/m) * self.params['A1'].T.dot(dZ2) + (self.lambda_reg / m) * self.params['W2']
-        db2 = (1/m) * np.sum(dZ2, axis=0, keepdims=True)
-
-
-        # Backpropagate the error through the 1st layer
-        dA1 = dZ2.dot(self.params['W2'].T)
-        dZ1 = dA1 * self.dRelu(self.params['Z1'])
-        dW1 = (1/m) * X.T.dot(dZ1) + (self.lambda_reg / m) * self.params['W1']
-        db1 = (1/m) * np.sum(dZ1, axis=0, keepdims=True)
-
-        # Gradient Clipping (Add this to avoid large gradients)
-        grad_clip_value = 10  # Clip gradients to prevent explosion
-        dW1 = np.clip(dW1, -grad_clip_value, grad_clip_value)
-        dW2 = np.clip(dW2, -grad_clip_value, grad_clip_value)
-        dW3 = np.clip(dW3, -grad_clip_value, grad_clip_value)
-        dW4 = np.clip(dW4, -grad_clip_value, grad_clip_value)
-
-        # Update the weights and biases using gradient descent (SGD)
-        self.params['W1'] -= self.learning_rate * dW1
-        self.params['b1'] -= self.learning_rate * db1.T
-        self.params['W2'] -= self.learning_rate * dW2
-        self.params['b2'] -= self.learning_rate * db2.T
-        self.params['W3'] -= self.learning_rate * dW3
-        self.params['b3'] -= self.learning_rate * db3.T
-        self.params['W4'] -= self.learning_rate * dW4
-
     def predict(self, X):
-        Z1 = X.dot(self.params['W1']) + self.params['b1'].T
+        '''
+        Predicts on a test data
+        '''
+        Z1 = X.dot(self.params['W1']) + self.params['b1']
         A1 = self.relu(Z1)
-        Z2 = A1.dot(self.params['W2']) + self.params['b2'].T
+        Z2 = A1.dot(self.params['W2']) + self.params['b2']
         A2 = self.relu(Z2)
-        Z3 = A2.dot(self.params['W3']) + self.params['b3'].T
+        Z3 = A2.dot(self.params['W3']) + self.params['b3']
         A3 = self.relu(Z3)
-        Z4 = A3.dot(self.params['W4']) + self.params['b4'].T
-        return Z4  # No ReLU in the output layer
+        Z4 = A3.dot(self.params['W4']) + self.params['b4']
+        pred = self.relu(Z4) 
+        return pred
+
+    
+    def evaluate(self, x_test, y_test):
+     preds = np.array(self.predict(x_test))
+     true_outputs = np.array(y_test)
+     metrics = {
+        "RMSE": self.rmse_loss(true_outputs, preds),
+        "MSE": self.mse_loss(true_outputs, preds),
+        "MAE": self.mae_loss(true_outputs, preds),
+        "R2": self.r2_score(true_outputs, preds)
+     }
+     return metrics
 
     def plot_loss(self):
-        plt.figure(figsize=(12, 4))
-        plt.subplot(1, 3, 1)
-        plt.plot(self.loss, label='Training Loss')
-        plt.plot(self.loss_test, label='Testing Loss')
-        plt.legend()
+        '''
+        Plots the loss curve
+        '''
+        plt.subplots(1,3)
+        plt.subplot(1,3,1)
+        plt.plot(self.loss,label='Training Loss')
+        plt.plot(self.loss_test,label='Testing Loss')
+        plt.legend(loc='best')
         plt.xlabel("Epoch")
         plt.ylabel("MSE Loss")
-        plt.title("Training & Testing MSE Loss")
-
-        plt.subplot(1, 3, 2)
-        plt.plot(self.loss_train_mae, label='Training MAE')
-        plt.plot(self.loss_test_mae, label='Testing MAE')
-        plt.legend()
+        plt.title("Training and Testing MSE Loss")
+        plt.subplot(1,3,2)
+        plt.plot(self.loss_train_mae,label='Training Loss')
+        plt.plot(self.loss_test_mae,label='Testing Loss')
+        plt.legend(loc='best')
         plt.xlabel("Epoch")
         plt.ylabel("MAE Loss")
-        plt.title("Training & Testing MAE Loss")
-
-        plt.subplot(1, 3, 3)
-        plt.plot(self.loss_train_rmse, label='Training RMSE')
-        plt.plot(self.loss_test_rmse, label='Testing RMSE')
-        plt.legend()
+        plt.title("Training and Testing MAE Loss")
+        plt.subplot(1,3,3)
+        plt.plot(self.loss_train_rmse,label='Training Loss')
+        plt.plot(self.loss_test_rmse,label='Testing Loss')
+        plt.legend(loc='best')
         plt.xlabel("Epoch")
         plt.ylabel("RMSE Loss")
-        plt.title("Training & Testing RMSE Loss")
+        plt.title("Training and Testing RMSE Loss")
+        plt.show()    
+        
 
-        plt.show()
+if __name__ == "__main__":
+    # =================== Load and preprocess data ===================
+    data = pd.read_csv(r"Data\SolarPrediction.csv")
+
+    X = data.drop(["UNIXTime", "Radiation"], axis=1)
+    Y = pd.DataFrame(data["Radiation"])  # Keep original units
+
+    X['TSR_Minute'] = pd.to_datetime(X['TimeSunRise'], errors='coerce').dt.minute
+    X['TSS_Minute'] = pd.to_datetime(X['TimeSunSet'], errors='coerce').dt.minute
+    X['TSS_Hour'] = np.where(pd.to_datetime(X['TimeSunSet'], errors='coerce').dt.hour == 18, 1, 0)
+    X['Month'] = pd.to_datetime(X['Data'], errors='coerce').dt.month
+    X['Day'] = pd.to_datetime(X['Data'], errors='coerce').dt.day
+    X['Hour'] = pd.to_datetime(X['Time'], format='%H:%M:%S', errors='coerce').dt.hour
+    X['Minute'] = pd.to_datetime(X['Time'], format='%H:%M:%S', errors='coerce').dt.minute
+    X['Second'] = pd.to_datetime(X['Time'], format='%H:%M:%S', errors='coerce').dt.second
+
+    X = X.drop(['Data', 'Time', 'TimeSunRise', 'TimeSunSet'], axis=1)
+
+    X['WindDirection(Degrees)_bin'] = np.digitize(
+        X['WindDirection(Degrees)'], np.linspace(0, 360, 19)
+    )
+    X['TSS_Minute_bin'] = np.digitize(X['TSS_Minute'], np.arange(0, 288 + 12, 12))
+    X['Humidity_bin'] = np.digitize(X['Humidity'], np.arange(32, 3200, 128))
+
+    X_train, X_test, y_train, y_test = train_test_split(X, Y, test_size=0.2, random_state=1)
+
+    scaler_X = StandardScaler()
+    X_train = scaler_X.fit_transform(X_train)
+    X_test = scaler_X.transform(X_test)
+
+    with open("scaler_X.pkl", "wb") as f:
+        pickle.dump(scaler_X, f)
+    print("\nInput scaler saved to scaler_X.pkl")
+
+    input_dim = X_train.shape[1]
+    net = Net(layers=[input_dim, 64, 48, 32, 1], iterations=200, learning_rate=0.001)
+    net.fit(X_train, np.asarray(y_train), X_test, np.asarray(y_test), optimizer="SGD", batch_size=64)
+
+    metrics = net.evaluate(X_test, np.asarray(y_test))
+    print("\nNeural Network Performance on Test Data:")
+    print(f"MSE: {metrics['MSE']:.4f}, RMSE: {metrics['RMSE']:.4f}, MAE: {metrics['MAE']:.4f}, R2: {metrics['R2']:.4f}")
+
+    net.plot_loss()
+
+    with h5py.File("NN_Weights.h5", 'w') as f:
+        f.create_dataset("W1", data=net.params["W1"])
+        f.create_dataset("W2", data=net.params["W2"])
+        f.create_dataset("W3", data=net.params["W3"])
+        f.create_dataset("W4", data=net.params["W4"])
+        f.create_dataset("b1", data=net.params["b1"])
+        f.create_dataset("b2", data=net.params["b2"])
+        f.create_dataset("b3", data=net.params["b3"])
+        f.create_dataset("b4", data=net.params["b4"])
+    print("\nWeights saved to NN_Weights.h5")

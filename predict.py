@@ -52,24 +52,24 @@ net1.compile(optimizer='adam', loss='mean_squared_error')
 
 # Try to load pre-trained weights
 try:
-    net1.load_weights('Optimal.weights.h5')  # .h5 format
+    net1.load_weights('OptimalWeights.weights.h5')  # .h5 format
     print("Loaded pre-trained weights.")
 except Exception as e:
     print("Could not load weights:", e)
     # Train the model with the entire dataset
     net1.fit(X_scaled, y_scaled, epochs=200, batch_size=32)
-    net1.save_weights('Optimal.weights1.h5')  # Save the trained weights
+    net1.save_weights('OptimalWeights2.weights.h5')  # Save the trained weights
 
 # Sample input for prediction (replicate the structure of your input)
 sample_input = {
-    "Temperature": [84],
-    "Pressure": [29.84],
-    "Humidity": [75],
-    "WindDirection(Degrees)": [155],
-    "Speed": [12],
-    "Time": ["13:00:00"],
-    "TimeSunRise": ["05:28:00"],
-    "TimeSunSet": ["17:50:00"]
+    "Temperature": [25],
+    "Pressure": [25.95],
+    "Humidity": [95],
+    "WindDirection(Degrees)": [0],
+    "Speed": [40],
+    "Time": ["10:18:00"],
+    "TimeSunRise": ["05:46:00"],
+    "TimeSunSet": ["16:54:00"]
 }
 
 # Convert the sample input to a DataFrame

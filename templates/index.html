@@ -1,0 +1,1155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solar Irradiance Predictor</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #6366f1;
+            --primary-light: #818cf8;
+            --primary-dark: #4f46e5;
+            --secondary: #ec4899;
+            --accent: #14b8a6;
+            --surface: #ffffff;
+            --background: #fafbfc;
+            --text-primary: #0f172a;
+            --text-secondary: #64748b;
+            --border: #e2e8f0;
+            --shadow-sm: rgba(0, 0, 0, 0.05);
+            --shadow-md: rgba(0, 0, 0, 0.1);
+            --shadow-lg: rgba(0, 0, 0, 0.15);
+            --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --gradient-success: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+        }
+
+        body.dark-mode {
+            --primary: #818cf8;
+            --primary-light: #a5b4fc;
+            --primary-dark: #6366f1;
+            --secondary: #f472b6;
+            --accent: #2dd4bf;
+            --surface: #1e293b;
+            --background: #0f172a;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --border: #334155;
+            --shadow-sm: rgba(0, 0, 0, 0.3);
+            --shadow-md: rgba(0, 0, 0, 0.4);
+            --shadow-lg: rgba(0, 0, 0, 0.5);
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--background);
+            color: var(--text-primary);
+            line-height: 1.6;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        .bg-particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+            opacity: 0.4;
+        }
+
+        .particle {
+            position: absolute;
+            border-radius: 50%;
+            animation: float 20s infinite ease-in-out;
+        }
+
+        .particle:nth-child(1) {
+            width: 80px;
+            height: 80px;
+            background: radial-gradient(circle, rgba(102, 126, 234, 0.4), transparent);
+            top: 10%;
+            left: 10%;
+            animation-delay: 0s;
+        }
+
+        .particle:nth-child(2) {
+            width: 120px;
+            height: 120px;
+            background: radial-gradient(circle, rgba(236, 72, 153, 0.3), transparent);
+            top: 50%;
+            right: 10%;
+            animation-delay: 5s;
+        }
+
+        .particle:nth-child(3) {
+            width: 100px;
+            height: 100px;
+            background: radial-gradient(circle, rgba(20, 184, 166, 0.3), transparent);
+            bottom: 20%;
+            left: 20%;
+            animation-delay: 10s;
+        }
+
+        @keyframes float {
+            0%, 100% {
+                transform: translate(0, 0) scale(1);
+            }
+            33% {
+                transform: translate(30px, -50px) scale(1.1);
+            }
+            66% {
+                transform: translate(-20px, 20px) scale(0.9);
+            }
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 24px;
+            width: 100%;
+            position: relative;
+            z-index: 1;
+        }
+
+        header {
+            padding: 20px 0;
+            position: sticky;
+            top: 0;
+            background: rgba(255, 255, 255, 0.7);
+            border-bottom: 1px solid var(--border);
+            z-index: 100;
+            backdrop-filter: blur(20px) saturate(180%);
+            box-shadow: 0 1px 3px var(--shadow-sm);
+            animation: slideDown 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        body.dark-mode header {
+            background: rgba(30, 41, 59, 0.7);
+        }
+
+        @keyframes slideDown {
+            from {
+                transform: translateY(-100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 800;
+            font-size: 1.25rem;
+            color: var(--text-primary);
+        }
+
+        .logo i {
+            font-size: 1.75rem;
+            background: var(--gradient-primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.1);
+            }
+        }
+
+        .header-buttons {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .btn-header {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            padding: 10px 20px;
+            border-radius: 50px;
+            cursor: pointer;
+            font-weight: 600;
+            color: var(--text-primary);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 2px 8px var(--shadow-sm);
+            position: relative;
+        }
+
+        .btn-header:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px var(--shadow-md);
+            border-color: var(--primary);
+        }
+
+        .btn-header i {
+            transition: transform 0.3s ease;
+        }
+
+        .btn-header:hover i {
+            transform: rotate(20deg);
+        }
+
+        .history-badge {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background: var(--secondary);
+            color: white;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            font-weight: 700;
+        }
+
+        main {
+            flex: 1;
+            padding: 60px 0;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .hero {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        h1 {
+            font-size: 3rem;
+            font-weight: 800;
+            margin-bottom: 16px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            background-size: 200% auto;
+            animation: gradientShift 3s ease infinite;
+            letter-spacing: -0.5px;
+        }
+
+        @keyframes gradientShift {
+            0%, 100% {
+                background-position: 0% center;
+            }
+            50% {
+                background-position: 100% center;
+            }
+        }
+
+        h2 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin-bottom: 40px;
+            color: var(--text-primary);
+        }
+
+        .subtitle {
+            font-size: 1.25rem;
+            color: var(--text-secondary);
+            max-width: 700px;
+            margin: 0 auto;
+            font-weight: 500;
+        }
+
+        .stats-row {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            margin-top: 40px;
+            flex-wrap: wrap;
+        }
+
+        .stat-badge {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            padding: 12px 24px;
+            border-radius: 50px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            box-shadow: 0 2px 8px var(--shadow-sm);
+            transition: all 0.3s ease;
+        }
+
+        .stat-badge:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px var(--shadow-md);
+        }
+
+        .stat-badge i {
+            color: var(--primary);
+        }
+
+        .card {
+            background: var(--surface);
+            border-radius: 24px;
+            padding: 40px;
+            box-shadow: 0 4px 24px var(--shadow-sm);
+            border: 1px solid var(--border);
+            max-width: 700px;
+            margin: 0 auto;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: var(--gradient-primary);
+        }
+
+        .card:hover {
+            box-shadow: 0 12px 40px var(--shadow-md);
+            transform: translateY(-5px);
+        }
+
+        .form-grid {
+            display: grid;
+            gap: 24px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        label {
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        label i {
+            color: var(--primary);
+            width: 18px;
+        }
+
+        input {
+            padding: 14px 18px;
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            font-size: 1rem;
+            background: var(--background);
+            color: var(--text-primary);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            font-family: inherit;
+            font-weight: 500;
+        }
+
+        input::placeholder {
+            color: var(--text-secondary);
+            opacity: 0.6;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+        }
+
+        .button {
+            background: var(--gradient-primary);
+            color: white;
+            border: none;
+            padding: 16px 32px;
+            font-size: 1.05rem;
+            font-weight: 700;
+            border-radius: 14px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            margin-top: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            box-shadow: 0 8px 24px rgba(102, 126, 234, 0.3);
+            width: 100%;
+        }
+
+        .button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 32px rgba(102, 126, 234, 0.4);
+        }
+
+        .button:active {
+            transform: translateY(-1px);
+        }
+
+        .result-card {
+            background: var(--gradient-success);
+            border-radius: 24px;
+            padding: 48px;
+            text-align: center;
+            color: white;
+            max-width: 700px;
+            margin: 40px auto 0;
+            box-shadow: 0 20px 60px rgba(67, 233, 123, 0.3);
+            animation: slideUp 0.6s ease-out;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .result-label {
+            font-size: 0.95rem;
+            opacity: 0.95;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            font-weight: 700;
+        }
+
+        .result-value {
+            font-size: 4rem;
+            font-weight: 900;
+            margin-bottom: 12px;
+            text-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .result-unit {
+            font-size: 1.25rem;
+            opacity: 0.95;
+            font-weight: 600;
+        }
+
+        .result-icon {
+            font-size: 3rem;
+            margin-bottom: 16px;
+            animation: bounce 1s ease infinite;
+        }
+
+        @keyframes bounce {
+            0%, 100% {
+                transform: translateY(0);
+            }
+            50% {
+                transform: translateY(-10px);
+            }
+        }
+
+        .history-section {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 40px;
+        }
+
+        .clear-btn {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .clear-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(255, 107, 107, 0.3);
+        }
+
+        .history-empty {
+            text-align: center;
+            padding: 60px 40px;
+            background: var(--surface);
+            border-radius: 24px;
+            border: 2px dashed var(--border);
+        }
+
+        .history-empty i {
+            font-size: 3rem;
+            color: var(--text-secondary);
+            opacity: 0.5;
+            display: block;
+            margin-bottom: 16px;
+        }
+
+        .history-empty p {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .history-empty span {
+            color: var(--text-secondary);
+        }
+
+        .history-list {
+            display: grid;
+            gap: 20px;
+        }
+
+        .history-item {
+            background: var(--surface);
+            border-radius: 20px;
+            padding: 32px;
+            border: 1px solid var(--border);
+            transition: all 0.3s ease;
+            animation: slideUp 0.4s ease-out;
+            position: relative;
+        }
+
+        .history-item:hover {
+            box-shadow: 0 12px 40px var(--shadow-md);
+            transform: translateY(-3px);
+            border-color: var(--primary);
+        }
+
+        .history-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 24px;
+        }
+
+        .history-timestamp {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+        }
+
+        .history-result {
+            font-size: 2.5rem;
+            font-weight: 900;
+            background: var(--gradient-success);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .history-unit {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+
+        .delete-btn {
+            background: none;
+            border: none;
+            color: #ff6b6b;
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            padding: 8px;
+        }
+
+        .delete-btn:hover {
+            transform: scale(1.2);
+            color: #ee5a6f;
+        }
+
+        .history-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 16px;
+            margin-top: 20px;
+        }
+
+        .history-param {
+            background: var(--background);
+            padding: 14px;
+            border-radius: 12px;
+            border: 1px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .history-param:hover {
+            border-color: var(--primary);
+            box-shadow: 0 4px 12px var(--shadow-sm);
+        }
+
+        .param-icon {
+            color: var(--primary);
+            font-size: 1.2rem;
+            margin-bottom: 8px;
+        }
+
+        .param-label {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+            font-weight: 600;
+        }
+
+        .param-value {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .error {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+            color: white;
+            padding: 20px 24px;
+            border-radius: 14px;
+            margin-top: 32px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+            box-shadow: 0 8px 24px rgba(255, 107, 107, 0.3);
+            font-weight: 600;
+        }
+
+        .error i {
+            font-size: 1.5rem;
+        }
+
+        footer {
+            background: var(--surface);
+            border-top: 1px solid var(--border);
+            padding: 40px 0;
+            margin-top: auto;
+            position: relative;
+            z-index: 1;
+        }
+
+        .footer-content {
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+        }
+
+        .team {
+            margin-top: 16px;
+            font-weight: 600;
+            color: var(--text-primary);
+            line-height: 1.8;
+        }
+
+        .advisor {
+            margin-top: 12px;
+            font-style: italic;
+            font-weight: 500;
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2.25rem;
+            }
+
+            h2 {
+                font-size: 1.75rem;
+            }
+
+            .card {
+                padding: 28px;
+            }
+
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+
+            .result-value {
+                font-size: 2.5rem;
+            }
+
+            .history-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .header-buttons {
+                flex-wrap: wrap;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-particles">
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+    </div>
+
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <div class="logo">
+                    <i class="fas fa-solar-panel"></i>
+                    <span>Solar Predictor</span>
+                </div>
+                <div class="header-buttons">
+                    <button class="btn-header" id="historyBtn" onclick="toggleHistory()">
+                        <i class="fas fa-history"></i>
+                        <span>History</span>
+                        <span class="history-badge" id="historyBadge" style="display: none;">0</span>
+                    </button>
+                    <button class="btn-header" onclick="toggleMode()">
+                        <i class="fas fa-moon"></i>
+                        <span>Dark Mode</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <!-- Main Form View -->
+            <div id="mainView">
+                <div class="hero">
+                    <h1>Solar Irradiance Predictor</h1>
+                    <p class="subtitle">Harness the power of machine learning to predict solar irradiance with precision</p>
+
+                    <div class="stats-row">
+                        <div class="stat-badge">
+                            <i class="fas fa-bolt"></i>
+                            <span>Real-time Analysis</span>
+                        </div>
+                        <div class="stat-badge">
+                            <i class="fas fa-chart-line"></i>
+                            <span>High Accuracy</span>
+                        </div>
+                        <div class="stat-badge">
+                            <i class="fas fa-leaf"></i>
+                            <span>Green Energy</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <form id="predictionForm" onsubmit="handleSubmit(event)">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="Date"><i class="fas fa-calendar-day"></i> Date</label>
+                                <input type="date" id="Date" name="Date" required>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="Temperature"><i class="fas fa-thermometer-half"></i> Temperature (°F)</label>
+                                    <input type="number" id="Temperature" name="Temperature" placeholder="e.g., 75" required>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="Pressure"><i class="fas fa-tachometer-alt"></i> Pressure (hPa)</label>
+                                    <input type="number" id="Pressure" name="Pressure" placeholder="e.g., 1013" required>
+                                </div>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="Humidity"><i class="fas fa-water"></i> Humidity (%)</label>
+                                    <input type="number" id="Humidity" name="Humidity" placeholder="e.g., 65" required>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="WindDirection"><i class="fas fa-location-arrow"></i> Wind Direction (°)</label>
+                                    <input type="number" id="WindDirection" name="WindDirection" placeholder="e.g., 180" required>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="Speed"><i class="fas fa-wind"></i> Wind Speed (M/h)</label>
+                                <input type="number" id="Speed" name="Speed" placeholder="e.g., 15" required>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="Time"><i class="fas fa-clock"></i> Time</label>
+                                    <input type="text" id="Time" name="Time" placeholder="13:45:00" required oninput="autoColon(this)">
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="TimeSunRise"><i class="fas fa-sun"></i> Sunrise Time</label>
+                                    <input type="text" id="TimeSunRise" name="TimeSunRise" placeholder="06:30:00" required oninput="autoColon(this)">
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="TimeSunSet"><i class="fas fa-moon"></i> Sunset Time</label>
+                                <input type="text" id="TimeSunSet" name="TimeSunSet" placeholder="18:45:00" required oninput="autoColon(this)">
+                            </div>
+                        </div>
+
+                        <button type="submit" class="button">
+                            <i class="fas fa-calculator"></i> Calculate Prediction
+                        </button>
+                    </form>
+                </div>
+
+                <div id="errorContainer"></div>
+                <div id="resultContainer"></div>
+            </div>
+
+            <!-- History View -->
+            <div id="historyView" class="hidden">
+                <div class="history-section">
+                    <div class="history-header">
+                        <h2>Prediction History</h2>
+                        <button class="clear-btn" id="clearBtn" onclick="clearHistory()" style="display: none;">
+                            <i class="fas fa-trash"></i>
+                            Clear All
+                        </button>
+                    </div>
+
+                    <div id="historyContent"></div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <div class="container">
+            <div class="footer-content">
+                <div>Solar Irradiance Predictor © 2025</div>
+                <div class="team">
+                    Designed by Manish Kumar Gupta, Sneha Kumari, Ankit Shaw, Aastha Jaiswal, and Anand Kumar
+                </div>
+                <div class="advisor">
+                    Under the guidance of Prof. Dr. Sudipta Basu Pal
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        let predictions = [];
+
+        function toggleMode() {
+            const body = document.body;
+            const isDark = body.classList.toggle('dark-mode');
+            const button = document.querySelector('.btn-header:last-of-type span');
+            const icon = document.querySelector('.btn-header:last-of-type i');
+            
+            if (isDark) {
+                button.textContent = 'Light Mode';
+                icon.className = 'fas fa-sun';
+            } else {
+                button.textContent = 'Dark Mode';
+                icon.className = 'fas fa-moon';
+            }
+        }
+
+        function autoColon(input) {
+            const value = input.value.replace(/[^0-9]/g, '').slice(0, 6);
+            const parts = [];
+            if (value.length > 0) parts.push(value.slice(0, 2));
+            if (value.length > 2) parts.push(value.slice(2, 4));
+            if (value.length > 4) parts.push(value.slice(4, 6));
+            input.value = parts.join(':');
+        }
+
+        function handleSubmit(event) {
+            event.preventDefault();
+            
+            const errorContainer = document.getElementById('errorContainer');
+            errorContainer.innerHTML = '';
+
+            const formData = {
+                date: document.getElementById('Date').value,
+                temperature: document.getElementById('Temperature').value,
+                pressure: document.getElementById('Pressure').value,
+                humidity: document.getElementById('Humidity').value,
+                windDirection: document.getElementById('WindDirection').value,
+                windSpeed: document.getElementById('Speed').value,
+                time: document.getElementById('Time').value,
+                sunrise: document.getElementById('TimeSunRise').value,
+                sunset: document.getElementById('TimeSunSet').value
+            };
+
+            // Validation
+            if (!Object.values(formData).every(val => val)) {
+                errorContainer.innerHTML = `
+                    <div class="error">
+                        <i class="fas fa-exclamation-circle"></i>
+                        <span>Please fill in all fields</span>
+                    </div>
+                `;
+                return;
+            }
+
+            // Generate prediction (simulated)
+            const prediction = Math.floor(Math.random() * 800 + 100);
+            
+            const result = {
+                id: Date.now(),
+                timestamp: new Date().toLocaleString(),
+                prediction: prediction,
+                inputs: formData
+            };
+
+            predictions.unshift(result);
+            updateHistoryBadge();
+            displayResult(result);
+        }
+
+        function displayResult(result) {
+            const resultContainer = document.getElementById('resultContainer');
+            resultContainer.innerHTML = `
+                <div class="result-card">
+                    <div class="result-icon">☀️</div>
+                    <div class="result-label">Predicted Solar Irradiance</div>
+                    <div class="result-value">${result.prediction}</div>
+                    <div class="result-unit">W/m²</div>
+                </div>
+
+                <div style="background: var(--surface); border-radius: 24px; padding: 40px; box-shadow: 0 4px 24px var(--shadow-sm); border: 1px solid var(--border); max-width: 700px; margin: 32px auto 0; animation: slideUp 0.6s ease-out; position: relative; overflow: hidden;">
+                    <div style="position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);"></div>
+                    <h3 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 32px; color: var(--text-primary); display: flex; align-items: center; gap: 12px;">
+                        <span>📊</span> Input Parameters
+                    </h3>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 20px;">
+                        <div style="display: flex; align-items: flex-start; gap: 14px; padding: 18px; background: var(--background); border-radius: 14px; border: 1px solid transparent;">
+                            <i class="fas fa-calendar-day" style="color: var(--primary); font-size: 1.5rem; margin-top: 2px;"></i>
+                            <div>
+                                <div style="font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; font-weight: 600;">Date</div>
+                                <div style="font-size: 1.05rem; font-weight: 700; color: var(--text-primary);">${result.inputs.date}</div>
+                            </div>
+                        </div>
+                        <div style="display: flex; align-items: flex-start; gap: 14px; padding: 18px; background: var(--background); border-radius: 14px; border: 1px solid transparent;">
+                            <i class="fas fa-thermometer-half" style="color: var(--primary); font-size: 1.5rem; margin-top: 2px;"></i>
+                            <div>
+                                <div style="font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; font-weight: 600;">Temperature</div>
+                                <div style="font-size: 1.05rem; font-weight: 700; color: var(--text-primary);">${result.inputs.temperature}°F</div>
+                            </div>
+                        </div>
+                        <div style="display: flex; align-items: flex-start; gap: 14px; padding: 18px; background: var(--background); border-radius: 14px; border: 1px solid transparent;">
+                            <i class="fas fa-tachometer-alt" style="color: var(--primary); font-size: 1.5rem; margin-top: 2px;"></i>
+                            <div>
+                                <div style="font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; font-weight: 600;">Pressure</div>
+                                <div style="font-size: 1.05rem; font-weight: 700; color: var(--text-primary);">${result.inputs.pressure} hPa</div>
+                            </div>
+                        </div>
+                        <div style="display: flex; align-items: flex-start; gap: 14px; padding: 18px; background: var(--background); border-radius: 14px; border: 1px solid transparent;">
+                            <i class="fas fa-water" style="color: var(--primary); font-size: 1.5rem; margin-top: 2px;"></i>
+                            <div>
+                                <div style="font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; font-weight: 600;">Humidity</div>
+                                <div style="font-size: 1.05rem; font-weight: 700; color: var(--text-primary);">${result.inputs.humidity}%</div>
+                            </div>
+                        </div>
+                        <div style="display: flex; align-items: flex-start; gap: 14px; padding: 18px; background: var(--background); border-radius: 14px; border: 1px solid transparent;">
+                            <i class="fas fa-location-arrow" style="color: var(--primary); font-size: 1.5rem; margin-top: 2px;"></i>
+                            <div>
+                                <div style="font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; font-weight: 600;">Wind Direction</div>
+                                <div style="font-size: 1.05rem; font-weight: 700; color: var(--text-primary);">${result.inputs.windDirection}°</div>
+                            </div>
+                        </div>
+                        <div style="display: flex; align-items: flex-start; gap: 14px; padding: 18px; background: var(--background); border-radius: 14px; border: 1px solid transparent;">
+                            <i class="fas fa-wind" style="color: var(--primary); font-size: 1.5rem; margin-top: 2px;"></i>
+                            <div>
+                                <div style="font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; font-weight: 600;">Wind Speed</div>
+                                <div style="font-size: 1.05rem; font-weight: 700; color: var(--text-primary);">${result.inputs.windSpeed} M/h</div>
+                            </div>
+                        </div>
+                        <div style="display: flex; align-items: flex-start; gap: 14px; padding: 18px; background: var(--background); border-radius: 14px; border: 1px solid transparent;">
+                            <i class="fas fa-clock" style="color: var(--primary); font-size: 1.5rem; margin-top: 2px;"></i>
+                            <div>
+                                <div style="font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; font-weight: 600;">Time</div>
+                                <div style="font-size: 1.05rem; font-weight: 700; color: var(--text-primary);">${result.inputs.time}</div>
+                            </div>
+                        </div>
+                        <div style="display: flex; align-items: flex-start; gap: 14px; padding: 18px; background: var(--background); border-radius: 14px; border: 1px solid transparent;">
+                            <i class="fas fa-sun" style="color: var(--primary); font-size: 1.5rem; margin-top: 2px;"></i>
+                            <div>
+                                <div style="font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; font-weight: 600;">Sunrise</div>
+                                <div style="font-size: 1.05rem; font-weight: 700; color: var(--text-primary);">${result.inputs.sunrise}</div>
+                            </div>
+                        </div>
+                        <div style="display: flex; align-items: flex-start; gap: 14px; padding: 18px; background: var(--background); border-radius: 14px; border: 1px solid transparent;">
+                            <i class="fas fa-moon" style="color: var(--primary); font-size: 1.5rem; margin-top: 2px;"></i>
+                            <div>
+                                <div style="font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; font-weight: 600;">Sunset</div>
+                                <div style="font-size: 1.05rem; font-weight: 700; color: var(--text-primary);">${result.inputs.sunset}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function updateHistoryBadge() {
+            const badge = document.getElementById('historyBadge');
+            if (predictions.length > 0) {
+                badge.style.display = 'flex';
+                badge.textContent = predictions.length;
+            } else {
+                badge.style.display = 'none';
+            }
+        }
+
+        function toggleHistory() {
+            const mainView = document.getElementById('mainView');
+            const historyView = document.getElementById('historyView');
+            
+            mainView.classList.toggle('hidden');
+            historyView.classList.toggle('hidden');
+            
+            if (!historyView.classList.contains('hidden')) {
+                renderHistory();
+            }
+        }
+
+        function renderHistory() {
+            const historyContent = document.getElementById('historyContent');
+            const clearBtn = document.getElementById('clearBtn');
+            
+            if (predictions.length === 0) {
+                historyContent.innerHTML = `
+                    <div class="history-empty">
+                        <i class="fas fa-inbox"></i>
+                        <p>No predictions yet</p>
+                        <span>Make your first prediction to see it here!</span>
+                    </div>
+                `;
+                clearBtn.style.display = 'none';
+            } else {
+                clearBtn.style.display = 'flex';
+                historyContent.innerHTML = `<div class="history-list">${predictions.map((result, idx) => `
+                    <div class="history-item" style="animation-delay: ${idx * 0.05}s;">
+                        <div class="history-item-header">
+                            <div>
+                                <div class="history-timestamp">${result.timestamp}</div>
+                                <div class="history-result">${result.prediction}</div>
+                                <div class="history-unit">W/m²</div>
+                            </div>
+                            <button class="delete-btn" onclick="deleteResult(${result.id})" title="Delete">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                        </div>
+                        <div class="history-grid">
+                            <div class="history-param">
+                                <div class="param-icon"><i class="fas fa-calendar-day"></i></div>
+                                <div class="param-label">Date</div>
+                                <div class="param-value">${result.inputs.date}</div>
+                            </div>
+                            <div class="history-param">
+                                <div class="param-icon"><i class="fas fa-thermometer-half"></i></div>
+                                <div class="param-label">Temperature</div>
+                                <div class="param-value">${result.inputs.temperature}°F</div>
+                            </div>
+                            <div class="history-param">
+                                <div class="param-icon"><i class="fas fa-tachometer-alt"></i></div>
+                                <div class="param-label">Pressure</div>
+                                <div class="param-value">${result.inputs.pressure}</div>
+                            </div>
+                            <div class="history-param">
+                                <div class="param-icon"><i class="fas fa-water"></i></div>
+                                <div class="param-label">Humidity</div>
+                                <div class="param-value">${result.inputs.humidity}%</div>
+                            </div>
+                            <div class="history-param">
+                                <div class="param-icon"><i class="fas fa-location-arrow"></i></div>
+                                <div class="param-label">Wind Dir</div>
+                                <div class="param-value">${result.inputs.windDirection}°</div>
+                            </div>
+                            <div class="history-param">
+                                <div class="param-icon"><i class="fas fa-wind"></i></div>
+                                <div class="param-label">Wind Speed</div>
+                                <div class="param-value">${result.inputs.windSpeed}</div>
+                            </div>
+                            <div class="history-param">
+                                <div class="param-icon"><i class="fas fa-clock"></i></div>
+                                <div class="param-label">Time</div>
+                                <div class="param-value">${result.inputs.time}</div>
+                            </div>
+                            <div class="history-param">
+                                <div class="param-icon"><i class="fas fa-sun"></i></div>
+                                <div class="param-label">Sunrise</div>
+                                <div class="param-value">${result.inputs.sunrise}</div>
+                            </div>
+                            <div class="history-param">
+                                <div class="param-icon"><i class="fas fa-moon"></i></div>
+                                <div class="param-label">Sunset</div>
+                                <div class="param-value">${result.inputs.sunset}</div>
+                            </div>
+                        </div>
+                    </div>
+                `).join('')}</div>`;
+            }
+        }
+
+        function deleteResult(id) {
+            predictions = predictions.filter(p => p.id !== id);
+            updateHistoryBadge();
+            renderHistory();
+        }
+
+        function clearHistory() {
+            if (confirm('Are you sure you want to clear all history? This cannot be undone.')) {
+                predictions = [];
+                updateHistoryBadge();
+                renderHistory();
+            }
+        }
+    </script>
+</body>
+</html>

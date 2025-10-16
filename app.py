@@ -1,152 +1,119 @@
+from flask import Flask, render_template, request
 import numpy as np
 import pandas as pd
+import pickle
 import h5py
-import seaborn as sns
-import matplotlib.pyplot as plt
-from sklearn.preprocessing import StandardScaler
-from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score, accuracy_score, confusion_matrix, classification_report
-from sklearn.model_selection import train_test_split
-from Models.NeuralNetwork import Net
-from Models.LinearRegression import LR
+from Models.NeuralNetwork import Net  # import your Net class
 
-# Load and preprocess the data
-data = pd.read_csv("Solar-Irradiance-Forecasting-using-ANNs-from-Scratch\Data\SolarPrediction.csv")
-X = data.drop(["UNIXTime", "Radiation"], axis=1)
-Y = pd.DataFrame(data.loc[:, "Radiation"])
+# ----------------------------
+# Initialize Flask app
+# ----------------------------
+app = Flask(__name__)
 
-# Feature Engineering
-X['TSR_Minute'] = pd.to_datetime(X['TimeSunRise']).dt.minute
-X['TSS_Minute'] = pd.to_datetime(X['TimeSunSet']).dt.minute
-X['TSS_Hour'] = np.where(pd.to_datetime(X['TimeSunSet']).dt.hour == 18, 1, 0)
+# ----------------------------
+# Set seed for reproducibility
+# ----------------------------
+np.random.seed(42)
 
-X['Month'] = pd.to_datetime(X['Data']).dt.month
-X['Day'] = pd.to_datetime(X['Data']).dt.day
-X['Hour'] = pd.to_datetime(X['Time']).dt.hour
-X['Minute'] = pd.to_datetime(X['Time']).dt.minute
-X['Second'] = pd.to_datetime(X['Time']).dt.second
+# ----------------------------
+# Load saved scaler
+# ----------------------------
+with open("scaler_X.pkl", "rb") as f:
+    scaler_X = pickle.load(f)
 
-X = X.drop(['Data', 'Time', 'TimeSunRise', 'TimeSunSet'], axis=1)
-X['WindDirection(Degrees)_bin'] = np.digitize(X['WindDirection(Degrees)'], np.arange(0.0, 1.0, 0.02).tolist())
-X['TSS_Minute_bin'] = np.digitize(X['TSS_Minute'], np.arange(0.0, 288.0, 12).tolist())
-X['Humidity_bin'] = np.digitize(X['Humidity'], np.arange(32, 3192, 128).tolist())
+# ----------------------------
+# Load trained model
+# ----------------------------
+# Make sure to match the architecture used during training
+net = Net(layers=[16, 64, 48, 32, 1])
+net.params = {}  # initialize params dict
 
-# Split data into training and testing sets
-X_train, X_test, y_train, y_test = train_test_split(X, Y, test_size=0.2, random_state=1)
+# Load weights
+with h5py.File("NN_Weights.h5", "r") as f:
+    for key in f.keys():
+        net.params[key] = np.array(f[key])
 
-# Scale the data
-scaler = StandardScaler()
-X_train = scaler.fit_transform(X_train)
-X_test = scaler.transform(X_test)
-y_train = np.asarray(y_train)
-y_test = np.asarray(y_test)
+# ----------------------------
+# Helper function: preprocess input
+# ----------------------------
+def preprocess_input(form):
+    """
+    Convert raw form data into feature vector matching the trained model.
+    Performs same feature engineering as training phase.
+    """
+    try:
+        # Raw user input
+        date = form["Date"]
+        temp = float(form["Temperature"])
+        pressure = float(form["Pressure"])
+        humidity = float(form["Humidity"])
+        wind_dir = float(form["WindDirection"])
+        wind_speed = float(form["Speed"])
+        time = form["Time"]
+        sunrise = form["TimeSunRise"]
+        sunset = form["TimeSunSet"]
 
-# Initialize and Train Linear Regression model
-lr = LR("Batch", 0.001, 5000)
-lr.fit(X_train, y_train, X_test, y_test, "Batch")
+        # Feature engineering
+        df = pd.DataFrame([{
+            "Temperature": temp,
+            "Pressure": pressure,
+            "Humidity": humidity,
+            "WindDirection(Degrees)": wind_dir,
+            "Speed": wind_speed,
+            "Data": date,
+            "Time": time,
+            "TimeSunRise": sunrise,
+            "TimeSunSet": sunset
+        }])
 
-# Predictions for Linear Regression
-y_pred_lr = lr.predict(X_test)
+        df["TSR_Minute"] = pd.to_datetime(df["TimeSunRise"], errors="coerce").dt.minute
+        df["TSS_Minute"] = pd.to_datetime(df["TimeSunSet"], errors="coerce").dt.minute
+        df["TSS_Hour"] = np.where(
+            pd.to_datetime(df["TimeSunSet"], errors="coerce").dt.hour == 18, 1, 0
+        )
+        df["Month"] = pd.to_datetime(df["Data"], errors="coerce").dt.month
+        df["Day"] = pd.to_datetime(df["Data"], errors="coerce").dt.day
+        df["Hour"] = pd.to_datetime(df["Time"], format="%H:%M:%S", errors="coerce").dt.hour
+        df["Minute"] = pd.to_datetime(df["Time"], format="%H:%M:%S", errors="coerce").dt.minute
+        df["Second"] = pd.to_datetime(df["Time"], format="%H:%M:%S", errors="coerce").dt.second
 
-# --- Performance Metrics for Regression ---
-def regression_metrics(y_true, y_pred, model_name="Model"):
-    rmse = np.sqrt(mean_squared_error(y_true, y_pred))
-    mse = mean_squared_error(y_true, y_pred)
-    mae = mean_absolute_error(y_true, y_pred)
-    r2 = r2_score(y_true, y_pred)
+        df = df.drop(["Data", "Time", "TimeSunRise", "TimeSunSet"], axis=1)
 
-    print(f"\nPerformance Metrics for {model_name}:")
-    print(f"RMSE: {rmse:.4f}")
-    print(f"MSE: {mse:.4f}")
-    print(f"MAE: {mae:.4f}")
-    print(f"R² Score: {r2:.4f}")
+        df["WindDirection(Degrees)_bin"] = np.digitize(
+            df["WindDirection(Degrees)"], np.linspace(0, 360, 19)
+        )
+        df["TSS_Minute_bin"] = np.digitize(df["TSS_Minute"], np.arange(0, 288 + 12, 12))
+        df["Humidity_bin"] = np.digitize(df["Humidity"], np.arange(32, 3200, 128))
 
-    return rmse, mse, mae, r2
+        # Scale input
+        X_scaled = scaler_X.transform(df)
 
-# Evaluate Linear Regression
-lr_rmse, lr_mse, lr_mae, lr_r2 = regression_metrics(y_test, y_pred_lr, "Linear Regression")
+        return X_scaled
+    except Exception as e:
+        raise ValueError(f"Input preprocessing failed: {str(e)}")
 
-# Plot Loss Curve for Linear Regression
-lr.plot_loss()
+# ----------------------------
+# Routes
+# ----------------------------
+@app.route("/", methods=["GET", "POST"])
+def home():
+    if request.method == "POST":
+        try:
+            # Preprocess input
+            X_scaled = preprocess_input(request.form)
 
-# Initialize and Train Neural Network
-net = Net(iterations=200, learning_rate=0.001)
-net.fit(X_train, y_train, X_test, y_test, optimizer="SGD", batch_size=128)
+            # Predict
+            prediction = net.predict(X_scaled)
+            predicted_value = float(prediction[0][0])  # keep continuous output
 
-# Predictions for Neural Network
-y_pred_nn = net.predict(X_test)
+            return render_template("index.html", prediction=predicted_value)
+        except Exception as e:
+            return render_template("index.html", error=f"Error: {str(e)}")
+    else:
+        return render_template("index.html")
 
-# Evaluate Neural Network
-nn_rmse, nn_mse, nn_mae, nn_r2 = regression_metrics(y_test, y_pred_nn, "Neural Network")
-
-# Plot Loss Curve for Neural Network
-net.plot_loss()
-
-# --- Classification Metrics for NN (if applicable) ---
-if len(np.unique(y_test)) <= 10:  # If solar radiation has discrete classes
-    y_pred_nn_class = np.round(y_pred_nn)  # Convert predictions to nearest integer
-    y_test_class = np.round(y_test)
-
-    # Compute Confusion Matrix
-    cm = confusion_matrix(y_test_class, y_pred_nn_class)
-    accuracy = accuracy_score(y_test_class, y_pred_nn_class)
-    report = classification_report(y_test_class, y_pred_nn_class)
-
-    print("\nNeural Network Classification Metrics:")
-    print(f"Accuracy: {accuracy * 100:.2f}%")
-    print("Classification Report:\n", report)
-
-    # Plot Confusion Matrix
-    plt.figure(figsize=(6, 4))
-    sns.heatmap(cm, annot=True, fmt='d', cmap="Blues", xticklabels=np.unique(y_test_class), yticklabels=np.unique(y_test_class))
-    plt.xlabel("Predicted Label")
-    plt.ylabel("True Label")
-    plt.title("Confusion Matrix")
-    plt.show()
-
-# Print the learned weights
-print("W1:", net.params["W1"])
-print("W2:", net.params["W2"])
-print("W3:", net.params["W3"])
-print("W4:", net.params["W4"])
-print("b1:", net.params["b1"])
-print("b2:", net.params["b2"])
-print("b3:", net.params["b3"])
-print("b4:", net.params["b4"])
-
-# Save weights to HDF5 file after training
-with h5py.File("OptimalWeights.h5", 'w') as f:
-    f.create_dataset("W1", data=net.params["W1"])
-    f.create_dataset("W2", data=net.params["W2"])
-    f.create_dataset("W3", data=net.params["W3"])
-    f.create_dataset("W4", data=net.params["W4"])
-    f.create_dataset("b1", data=net.params["b1"])
-    f.create_dataset("b2", data=net.params["b2"])
-    f.create_dataset("b3", data=net.params["b3"])
-    f.create_dataset("b4", data=net.params["b4"])
-
-# Save weights to text file after training
-with open("OptimalWeights.txt", 'w') as f:
-    f.write("W1: ")
-    np.savetxt(f, net.params["W1"])
-    f.write("\n")
-    f.write("W2: ")
-    np.savetxt(f, net.params["W2"])
-    f.write("\n")
-    f.write("W3: ")
-    np.savetxt(f, net.params["W3"])
-    f.write("\n")
-    f.write("W4: ")
-    np.savetxt(f, net.params["W4"])
-    f.write("\n")
-    f.write("b1: ")
-    np.savetxt(f, net.params["b1"])
-    f.write("\n")
-    f.write("b2: ")
-    np.savetxt(f, net.params["b2"])
-    f.write("\n")
-    f.write("b3: ")
-    np.savetxt(f, net.params["b3"])
-    f.write("\n")
-    f.write("b4: ")
-    np.savetxt(f, net.params["b4"])
-    f.write("\n")
+# ----------------------------
+# Run App
+# ----------------------------
+if __name__ == "__main__":
+    app.run(debug=True)
