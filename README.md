@@ -141,12 +141,20 @@ If you want to retrain the model:
 
 ---
 
-## Author
+## 👨‍💻 Authors & Contributors
 
-**Manish Kumar Gupta**
+This project was a collaborative effort by the following individuals:
 
-* GitHub: [github.com/Manishgupta5815](https://github.com/Manishgupta5815)
-* LinkedIn: [linkedin.com/in/manni2026](https://linkedin.com/in/manni2026)
+-   **Manish Kumar Gupta**
+    -   GitHub: [Manishgupta5815](https://github.com/Manishgupta5815)
+    -   LinkedIn: [linkedin.com/in/manni2026](https://linkedin.com/in/manni2026)
+-   **Sneha Kumari**
+-   **Ankit Shaw**
+-   **Aastha Jaiswal**
+-   **Anand Kumar**
 
+## 🙏 Acknowledgments
+
+We extend our sincere gratitude to **Prof. Dr. Sudipta Basu Pal** for their invaluable guidance and mentorship throughout the development of this project.
 ```
 
