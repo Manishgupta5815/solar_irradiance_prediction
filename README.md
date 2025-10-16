@@ -22,8 +22,8 @@ This project demonstrates the integration of **machine learning with a Flask web
 ---
 ## Website Preview
 
-![MindEase Screenshot](<img width="1920" height="2951" alt="screencapture-127-0-0-1-5000-2025-10-17-03_07_31" src="https://github.com/user-attachments/assets/3ad31089-d922-4ead-92ac-ba14b2350b2b" />
-)  
+<img width="1920" height="2951" alt="screencapture-127-0-0-1-5000-2025-10-17-03_07_31" src="https://github.com/user-attachments/assets/3ad31089-d922-4ead-92ac-ba14b2350b2b" />
+
 *Screenshot of the MindEase web interface.*
 
 ---
