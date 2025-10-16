@@ -1,6 +1,6 @@
-Sure! Here's a professional **README.md** code version you can directly save as `README.md` in your project:
 
-```markdown
+
+
 # Solar Irradiance Prediction
 
 ## Project Overview
@@ -34,8 +34,8 @@ This project demonstrates the integration of **machine learning with a Flask web
 
 ## Project Structure
 
-```
 
+```
 Solar Irradiance Prediction/
 │
 ├─ app.py                  # Flask web app
@@ -49,10 +49,9 @@ Solar Irradiance Prediction/
 ├─ templates/
 │   └─ index.html          # Web interface template
 └─ README.md               # Project documentation
+```
 
-````
 
----
 
 ## Dataset
 
@@ -68,14 +67,14 @@ Solar Irradiance Prediction/
 
 1. Clone the repository:
 
-```bash
+
 git clone <repository_url>
 cd MindEase
-````
+
 
 2. Create and activate a virtual environment:
 
-```bash
+```
 python -m venv venv
 source venv/bin/activate   # Linux / Mac
 venv\Scripts\activate      # Windows
@@ -83,7 +82,7 @@ venv\Scripts\activate      # Windows
 
 3. Install required dependencies:
 
-```bash
+```
 pip install -r requirements.txt
 ```
 
@@ -144,9 +143,3 @@ If you want to retrain the model:
 
 ```
 
----
-
-If you want, I can also **add a GitHub-friendly version with badges, demo link, and concise description**, which looks very professional for showcasing your project online.  
-
-Do you want me to do that?
-```
