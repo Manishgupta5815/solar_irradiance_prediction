@@ -75,8 +75,10 @@ Solar Irradiance Prediction/
 1. Clone the repository:
 
 
+```
 git clone <repository_url>
-cd MindEase
+
+```
 
 
 2. Create and activate a virtual environment:
